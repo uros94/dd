@@ -1,7 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.utils import timezone
-from .models import Post, Comment, Profile, Term, Book, User
-from .forms import PostForm, CommentForm
+from .models import Comment, Profile, Term, Book, User
+from .forms import CommentForm
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.contrib.auth import login, authenticate

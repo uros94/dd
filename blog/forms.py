@@ -7,11 +7,6 @@ class BookForm(forms.ModelForm):
         model = Book
         fields = ('title', 'author', 'cover', 'genre', 'description', 'language')
 
-class PostForm(forms.ModelForm):
-    class Meta:
-        model = Post
-        fields = ('title', 'text',)
-
 class CommentForm(forms.ModelForm):
     class Meta:
         model = Comment
