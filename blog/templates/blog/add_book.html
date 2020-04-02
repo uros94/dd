@@ -1,0 +1,12 @@
+{% extends 'book/base.html' %}
+{% block content %}
+  <form name="myform" method="GET" action="">
+      <input type="text" name="search" placeholder="Search" value='{{request.GET.search}}' />
+      <input type="submit" name="query" value="Search" />
+  </form>
+  {% if books %}
+    {% for book in books %}
+        <p>{{book}}</p>
+    {% endfor %}
+  {% endif %}
+{% endblock %}

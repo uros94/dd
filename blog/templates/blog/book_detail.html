@@ -1,0 +1,38 @@
+{% extends 'blog/base.html' %}
+
+{% block content %}
+    {% if user.is_authenticated %}
+    <h1>{{book}}</h1>
+    <form method="POST" enctype="multipart/form-data" class="book-form">{% csrf_token %}
+        {% if book.cover %}
+            <img src='{{book.cover.url}}' class='img-responsive' height="350" width="200"/>
+        {% endif %}
+        <p>Language: {{ book.language}}</p>
+        <p>Description: {{ book.description}}</p>
+        {% if read is False %}
+            <div class="btn-group">
+                <a href="{% url 'book_like' pk=book.id %}"><button type="button">Like <span class="glyphicon glyphicon-thumbs-up"/></button></a>
+                <a href="{% url 'book_dislike' pk=book.id %}"><button type="button">Disike <span class="glyphicon glyphicon-thumbs-down"/></button></a>
+            </div>
+        {% endif %}
+        <a class="btn btn-default" href="{% url 'add_comment_to_post' pk=book.pk %}">Add comment</a>
+        {% for comment in book.comments.all %}
+            {% if user.is_authenticated or comment.approved_comment %}
+            <div class="comment">
+                <div class="date">
+                    {{ comment.created_date }}
+                    {% if not comment.approved_comment %}
+                        <a class="btn btn-default" href="{% url 'comment_remove' pk=comment.pk %}"><span class="glyphicon glyphicon-remove"></span></a>
+                        <a class="btn btn-default" href="{% url 'comment_approve' pk=comment.pk %}"><span class="glyphicon glyphicon-ok"></span></a>
+                    {% endif %}
+                </div>
+                <strong>{{ comment.author }}</strong>
+                <p>{{ comment.text|linebreaks }}</p>
+            </div>
+            {% endif %}
+            {% empty %}
+            <p>No comments here yet :(</p>
+        {% endfor %}
+    </form>
+    {% endif %}
+{% endblock %}
