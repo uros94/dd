@@ -1,5 +1,5 @@
 from django import forms
-from .models import Post, Comment
+from .models import Comment
 from .models import Book, Profile, Term
 
 class BookForm(forms.ModelForm):
@@ -10,5 +10,5 @@ class BookForm(forms.ModelForm):
 class CommentForm(forms.ModelForm):
     class Meta:
         model = Comment
-        fields = ('author', 'text',)
+        fields = ('comment',)
 

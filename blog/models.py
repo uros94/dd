@@ -6,39 +6,6 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 import math
 
-
-class Post(models.Model):
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    title = models.CharField(max_length=200)
-    text = models.TextField()
-    created_date = models.DateTimeField(default=timezone.now)
-    published_date = models.DateTimeField(blank=True, null=True)
-
-    def publish(self):
-        self.published_date = timezone.now()
-        self.save()
-
-    def __str__(self):
-        return self.title
-
-    def approved_comments(self):
-        return self.comments.filter(approved_comment=True)
-
-class Comment(models.Model):
-    book = models.ForeignKey('blog.Book', on_delete=models.CASCADE, related_name='comments')
-    author = models.CharField(max_length=200)
-    text = models.TextField()
-    created_date = models.DateTimeField(default=timezone.now)
-    approved_comment = models.BooleanField(default=False)
-
-    def approve(self):
-        self.approved_comment = True
-        self.save()
-
-    def __str__(self):
-        return self.text
-
-
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     location = models.CharField(max_length=30, blank=True)
@@ -85,7 +52,7 @@ class Profile(models.Model):
         terms = Term.objects.select_related().filter(user = self)
         return "Name : "+ self.user.username + "\t(terms: "+str(list(terms))+")"#+ "\t(similarUsers: "+str(users)+")"
 
-    async def recommendBooks(user1):
+    def recommendBooks(user1):
         print("\nrecomendation start!!!")
         booksColl = Profile.recommendBooksColl(user1)
         print("\ncollaborative: " + str(booksColl))
@@ -107,7 +74,7 @@ class Profile(models.Model):
         print("\nreccomended: " + str(rec))
         return rec
 
-    async def updateTerms(user1, term, newValue):
+    def updateTerms(user1, term, newValue):
         termOld = Term.objects.filter(user=user1)  # ovde moze da se upotrebi Q biblioteka
         termOld = termOld.filter(term=term)
         if (termOld):
@@ -235,3 +202,14 @@ class Term(models.Model):
 
     def __str__(self):
         return self.term+": "+str(self.value)
+
+class Comment(models.Model):
+    comment = models.TextField()
+    user = models.CharField(max_length=60)
+    date = models.CharField(max_length=30)
+    semantics = models.CharField(max_length=1)
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='comments')
+    #user = models.ForeignKey(Profile, related_name='comments')
+
+    def __str__(self):
+        return self.comment

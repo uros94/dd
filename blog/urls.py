@@ -12,9 +12,9 @@ urlpatterns = [
     # Books
     path('home/', views.home, name='home'),
     path('home/<int:pk>/', views.book_detail, name='book_detail'),
-    path('home/<int:pk>/comment/', views.add_comment_to_post, name='add_comment_to_post'),
-    path('comment/<int:pk>/approve/', views.comment_approve, name='comment_approve'),
-    path('comment/<int:pk>/remove/', views.comment_remove, name='comment_remove'),
+    #path('home/<int:pk>/comment/', views.add_comment_to_post, name='add_comment_to_post'),
+    #path('comment/<int:pk>/approve/', views.comment_approve, name='comment_approve'),
+    #path('comment/<int:pk>/remove/', views.comment_remove, name='comment_remove'),
     path('home/<int:pk>/book_like/', views.book_like, name='book_like'),
     path('home/<int:pk>/book_dislike/', views.book_dislike, name='book_dislike'),
 ]

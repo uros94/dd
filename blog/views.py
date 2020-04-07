@@ -1,20 +1,44 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Comment, Profile, Term, Book, User
-from .forms import CommentForm
+from .forms import CommentForm, BookForm
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.forms import UserCreationForm
 from django.db.models import Q
+from . import commentSemantics
+import datetime
 
 def book_detail(request, pk):
     book = get_object_or_404(Book, id=pk)
     read = False
+    if request.method == "POST":
+        form = BookForm(request.POST, request.FILES or None, instance=book)
+        comment = request.POST.get('comment')
+        if comment:
+            sentiment = commentSemantics.classify(comment)
+            now = datetime.datetime.now().strftime("%Y-%m-%d at %H:%M")
+            newComment = Comment(comment=comment, book=book, user=request.user.username, semantics=sentiment, date=str(now))
+            newComment.save()
+
+            user = request.user.profile
+            user.updateTerms(book.author, float(sentiment) * 0.8)
+            user.updateTerms(book.genre, float(sentiment) * 1.0)
+            user.updateTerms(book.language, float(sentiment) * 0.2)
+            if sentiment == 1:
+                user.likedBooks.add(book)
+            else:
+                user.dislikedBooks.add(book)
+            user.recommendBooks()
+            return redirect('book_detail', pk)
+    else:
+        form = BookForm(instance=book)
     allBooksuser1 = list(request.user.profile.likedBooks.all())
     allBooksuser1.extend(list(request.user.profile.dislikedBooks.all()))
+    comments = list(Comment.objects.filter(book=book))
     if allBooksuser1:
         read = book in allBooksuser1
-    return render(request, 'blog/book_detail.html', {'book': book, 'read': read})
+    return render(request, 'blog/book_detail.html', {'form': form, 'book': book, 'read': read, 'comments': comments})
 
 def book_like(request, pk):
     object = get_object_or_404(Book, id=pk)
