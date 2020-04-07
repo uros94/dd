@@ -1,10 +1,10 @@
-import nltk
-from nltk.stem.lancaster import LancasterStemmer
-import numpy as np
+#import nltk
+#from nltk.stem.lancaster import LancasterStemmer
+#import numpy as np
 import _pickle as pickle
 import os
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.linear_model import LogisticRegression
+#from sklearn.feature_extraction.text import CountVectorizer
+#from sklearn.linear_model import LogisticRegression
 
 script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
 

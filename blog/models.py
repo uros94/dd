@@ -92,6 +92,7 @@ class Profile(models.Model):
         allBooks = list(Book.objects.all())
         allBooksuser1 = list(user1.likedBooks.all())
         allBooksuser1.extend(list(user1.dislikedBooks.all()))
+        allBooksuser1 = list(set(allBooksuser1)) #remove duplicates
         if allBooksuser1:
             for book in allBooksuser1:
                 allBooks.remove(book)
@@ -113,6 +114,7 @@ class Profile(models.Model):
                 recBooks.remove(book)
         allBooksuser1 = list(user1.likedBooks.all())
         allBooksuser1.extend(list(user1.dislikedBooks.all()))
+        allBooksuser1 = list(set(allBooksuser1))  # remove duplicates
         if allBooksuser1:
             for book in allBooksuser1:
                 if book in recBooks:
