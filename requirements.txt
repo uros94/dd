@@ -1,4 +1,5 @@
 Django~=2.2.4
 Pillow
-nltk
-numpy
+#nltk
+#sklearn
+#numpy
