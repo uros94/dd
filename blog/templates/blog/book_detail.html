@@ -1,47 +1,65 @@
 {% extends 'blog/base.html' %}
 
 {% block content %}
+<div class="container">
     {% if user.is_authenticated %}
+
     <h1>{{book}}</h1>
-    <form method="POST" enctype="multipart/form-data" class="book-form">{% csrf_token %}
+    <row>
+        <div  style="float: left; width:25%;">
+
         {% if book.cover %}
             <img src='{{book.cover.url}}' class='img-responsive' height="350" width="200"/>
         {% endif %}
+        </div>
+
+        <div style="float: left; width:70%;">
+        <p class="about"><strong>Description:</strong> {{ book.description}}</p>
         <p class="about"><strong>Language:</strong> {{ book.language}}</p>
         <p class="about"><strong>Genre:</strong> {{ book.genre}}</p>
-        <p class="about"><strong>Description:</strong> {{ book.description}}</p>
         {% if read is False %}
             <div class="btn-group">
                 <a href="{% url 'book_like' pk=book.id %}"><button type="button">Like <span class="glyphicon glyphicon-thumbs-up"/></button></a>
                 <a href="{% url 'book_dislike' pk=book.id %}"><button type="button">Disike <span class="glyphicon glyphicon-thumbs-down"/></button></a>
             </div>
         {% endif %}
-         <form method="post" action="" name="form1">{% csrf_token %}
-        <div>
+        </div>
+
+
+    </row>
+
+    <div style="float: left; width:90%;">
+    <row>
+
+    <form method="post" action="" name="form1">{% csrf_token %}
+
           <h2>Have any comments?</h2>
           <textarea id="comment" name="comment" placeholder="Leave a comment about this book..."  rows="3"></textarea>
-        </div>
+
         <div>
           <button class="like">Comment</button>
         </div>
+
     </form>
-    {% if comments %}
-        {% for comment in comments %}
-        <div>
-            <hr />
-            <label id="user-info">Comment by <strong>{{comment.user}}</strong></label>
-            <label id="date">{{comment.date}}</label>
-            {% if comment.semantics == "1" %}
-                <h4 style="padding-left: 60px;"><span style="color: #008000;">{{comment.comment}}</span></h4>
-            {% elif comment.semantics == "0" %}
-                <h4 style="padding-left: 60px;"><span style="color: #695a5a;">{{comment.comment}}</span></h4>
-            {% else %}
-                <h4 style="padding-left: 60px;"><span style="color: #ff6600;">{{comment.comment}}</span></h4>
-            {% endif %}
-            <h4 style="padding-left: 60px;">&nbsp;</h4>
-        </div>
-        {% endfor %}
+    </row>
+        {% if comments %}
+            {% for comment in comments %}
+            <div>
+                <hr />
+                <label id="user-info">Comment by <strong>{{comment.user}}</strong></label>
+                <label id="date">{{comment.date}}</label>
+                {% if comment.semantics == "1" %}
+                    <h4 style="padding-left: 60px;"><span style="color: #008000;">{{comment.comment}}</span></h4>
+                {% elif comment.semantics == "0" %}
+                    <h4 style="padding-left: 60px;"><span style="color: #695a5a;">{{comment.comment}}</span></h4>
+                {% else %}
+                    <h4 style="padding-left: 60px;"><span style="color: #ff6600;">{{comment.comment}}</span></h4>
+                {% endif %}
+                <h4 style="padding-left: 60px;">&nbsp;</h4>
+            </div>
+            {% endfor %}
+        {% endif %}
+    </div>
     {% endif %}
-    </form>
-    {% endif %}
+    </div>
 {% endblock %}

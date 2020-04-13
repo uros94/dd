@@ -7,9 +7,11 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(redirect_authenticated_user=True, template_name='registration/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='first'), name='logout'),
     path('signup/', views.signup, name='signup'),
+    path('guest/', views.guest, name='guest'),
     path('', views.first, name='first'),
 
     # Books
+    path('new_user/', views.new_user, name='new_user'),
     path('home/', views.home, name='home'),
     path('home/<int:pk>/', views.book_detail, name='book_detail'),
     #path('home/<int:pk>/comment/', views.add_comment_to_post, name='add_comment_to_post'),

@@ -23,7 +23,10 @@
 }
 
 .about {
-  font-size: 130%;
+    font-family: "Oswald";
+    font-weight: 300;
+    font-size:150%;
+    color: #000000;
 }
 
 .like {
@@ -32,8 +35,15 @@
     font-size: 120%;
 }
 
-h1, h2, h3, h4 {
-    font-family: "Lobster", cursive;
+h1, h2 {
+    font-family: "Oswald", bold;
+    font-weight: 500;
+    color: #000000;
+}
+
+h3, h4 {
+    font-family: "Oswald";
+    font-weight: 300;
     color: #000000;
 }
 
@@ -60,6 +70,7 @@ button {
 #search-field {
     color: #000000;
     font-size: 140%;
+    font-family: "Oswald";
 }
 #date{
     float:right;

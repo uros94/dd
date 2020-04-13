@@ -22,21 +22,28 @@
     </div>
         <hr>
         <h2><p>Looking for more info about some specific book or just want to rate a book that you have already read? Use our search engine to find it.</p></h2>
-        <form name="myform" method="GET" action="">
+        <form name="myform" method="GET" action=""  style="margin-bottom: 50px;">
             <input type="text" name="search" placeholder="Search" value='{{request.GET.search}}' />
-            <input type="submit" value="Search" />
+            <a><input type="submit" value="Search" /></a>
         </form>
         <div class="album py-5 bg-light">
         <div class="container">
           <div class="row">
         {% if books %}
           {% for book in books %}
-          <div class="col-md-3 col-sm-4 col-xs-6">
-              <div class="card mb-4 box-shadow">
+          <div class="col-md-4">
+
+                <div class="col-md-6" style="margin-bottom: 50px;">
+              <img src='{{book.cover.url}}' class='img-responsive' style="height:220px;"/>
+              </div>
+
+
+                <div class="col-md-6" >
+
                 <h3>{{book.title}}</h3>
-                <div class="card-body">
-                <img src='{{book.cover.url}}' class='img-responsive' style="height:220px;"/>
-                  <p class="card-text">Author: {{book.author}}</p>
+
+                  <h4>{{book.author}}</h4>
+                  <p class="card-text">Genre: {{book.genre}}</p>
                   <p class="card-text">Language: {{book.language}}</p>
                   <div class="d-flex justify-content-between align-items-center">
                     <div class="btn-group">
@@ -44,8 +51,8 @@
                     </div>
                   </div>
                 </div>
+
               </div>
-            </div>
 
           {% endfor %}
         {% endif %}

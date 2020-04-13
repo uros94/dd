@@ -5,10 +5,14 @@
 {% endblock title %}
 
 {% block content %}
-        <h2>Welcome to ... </h2>
+    <h2>Welcome to...</h2>
+    <h4>Django Books is a social book cataloging website that allows users to freely
+    search, rate and review books and based on those interactions it
+    recommends books using collaborative and content based approaches, also
+    including the sentiment analysis of user comments.</h4>
 
 
-    <button type="button">Login</button>
+    <a href="{% url 'guest' %}"><button type="button">Visit as a guest</button></a>
     <a href="{% url 'login' %}"><button type="button">Login</button></a>
     <a href="{% url 'signup' %}"><button type="button">Signup</button></a>
 {% endblock content %}
