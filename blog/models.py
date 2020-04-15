@@ -1,6 +1,6 @@
-from django.conf import settings
+from multiselectfield import MultiSelectField
 from django.db import models
-from django.utils import timezone
+from django_mysql.models import ListCharField
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -99,7 +99,8 @@ class Profile(models.Model):
         recBooks = []
         for term in topTerms:
             for book in allBooks:
-                if (book.author == term.term or book.genre == term.term or book.language == term.term):
+                if (term.term in book.terms()):
+                #if (book.author == term.term or book.genre == term.term or book.language == term.term):
                     recBooks.append(book)
                     allBooks.remove(book)
         return recBooks
@@ -109,16 +110,14 @@ class Profile(models.Model):
         recBooks = []
         for user in list(user1.similarUsers.all()):
             recBooks.extend(list(user.likedBooks.all()))
-        for book in recBooks:
-            if recBooks.count(book) > 1:
-                recBooks.remove(book)
-        allBooksuser1 = list(user1.likedBooks.all())
+        recBooks = list(set(recBooks))  # remove duplicates
+        """allBooksuser1 = list(user1.likedBooks.all())
         allBooksuser1.extend(list(user1.dislikedBooks.all()))
         allBooksuser1 = list(set(allBooksuser1))  # remove duplicates
         if allBooksuser1:
             for book in allBooksuser1:
                 if book in recBooks:
-                    recBooks.remove(book)
+                    recBooks.remove(book)"""
         return recBooks
 
     def updateSimilarUsers(user1):
@@ -134,6 +133,7 @@ class Profile(models.Model):
                 i = i + 1
         similarity.sort(key=lambda x: x[0], reverse=True)
         user1.similarUsers.clear()
+        print("similarity list", similarity)
         for newSimilarUser in similarity[0:4]:
             user1.similarUsers.add(newSimilarUser[1])
         return
@@ -182,8 +182,9 @@ class Book(models.Model):
         ('Thriler','Thriler'),
         ('Poetry','Poetry'),
     )
-    genre = models.CharField(max_length=20, choices=genre_list)
-    #cover = models.FileField(null=True, blank=True)
+    genre = MultiSelectField(choices=genre_list,
+                                 max_choices=4,
+                                 max_length= 4 * 15)
     cover = models.ImageField()
     description = models.TextField()
     language = models.CharField(max_length=30)
@@ -191,8 +192,12 @@ class Book(models.Model):
     def __str__(self):
         return self.title+" by "+self.author
 
-    def approved_comments(self):
-        return self.comments.filter(approved_comment=True)
+    def terms(self):
+        terms = []
+        terms.append(self.author)
+        terms.append(self.language)
+        terms.extend(self.genre)
+        return terms
 
 class Term(models.Model):
     term = models.CharField(max_length=60)
