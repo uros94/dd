@@ -27,9 +27,9 @@ def book_detail(request, pk):
 
             user = request.user.profile
             terms_list = []
-            terms_list.append(object.author)
-            terms_list.append(object.language)
-            terms_list.extend(object.genre)
+            terms_list.append(book.author)
+            terms_list.append(book.language)
+            terms_list.extend(book.genre)
             asyncio.run(Profile.updateTerms(request.user.profile, terms_list, sentiment))  # run async
 
             if sentiment == 1:
