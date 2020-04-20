@@ -1,18 +1,60 @@
 {% extends 'registration/base.html' %}
 
-{% block title %}
-
-{% endblock title %}
-
 {% block content %}
-    <h2>Welcome to...</h2>
-    <h4>Django Books is a social book cataloging website that allows users to freely
-    search, rate and review books and based on those interactions it
-    recommends books using collaborative and content based approaches, also
-    including the sentiment analysis of user comments.</h4>
 
+<div class="container">
+    <div class="col-12 col-md-6 col-lg-6" style="margin-right: 30px;">
 
-    <a href="{% url 'guest' %}"><button type="button">Visit as a guest</button></a>
-    <a href="{% url 'login' %}"><button type="button">Login</button></a>
-    <a href="{% url 'signup' %}"><button type="button">Signup</button></a>
+        <h3 style="text-align:justify">Django Books is a social book cataloging website that allows users to freely search,
+            rate and review books.
+            <br>
+            <br>Based on the user interactions Django Books recommends books using:
+            <br><br>
+            <ul><li>collaborative recommendation technique</li><br>
+                <li>content based recommendation technique</li><br>
+                <li>sentiment analysis of user comments</li></ul>
+        </h3>
+        <br>
+
+    </div>
+
+    <div class="col-12 col-md-5 col-lg-5"  style="border: 2px solid #b5b5b5;  border-radius: 5px;">
+        <div class="myform form " style=" margin-left: 20px;  margin-right: 20px;">
+             <h3> Please login</h3>
+               <form action="" method="post" name="login">{% csrf_token %}
+
+                   {% if error %}
+                        {{error}}
+                   {% endif %}
+                  <div class="form-group">
+                     <input type="text" name="name"  class="form-control my-input" id="name" placeholder="Name">
+                  </div>
+                  <div class="form-group">
+                     <input type="password" name="password"  class="form-control my-input" id="password" placeholder="Password">
+                  </div>
+
+                  <div class="text-center ">
+                     <button type="submit" class=" btn btn-block send-button tx-tfm">Login</button>
+                  </div>
+                  <div class="form-group">
+                     <div class="login-or">
+                        <hr class="hr-or">
+                        <p class="small mt-3">You don't have an account yet? Signup or visit as a guest!</p>
+                     </div>
+                  </div>
+
+                     <div class="form-group">
+                     <a href="{% url 'signup' %}"><button type="button" class=" btn btn-block send-button tx-tfm">Signup</button></a>
+                  </div>
+                      <div class="form-group">
+                          <a href="{% url 'guest' %}"><button type="button" class=" btn btn-block send-button tx-tfm">Visit as a guest</button></a>
+                  </div>
+
+                  <p class="small mt-3">By signing up, you are indicating that you have read and agree to the <a href="#" class="ps-hero__content__link">Terms of Use</a> and <a href="#">Privacy Policy</a>.
+                  </p>
+               </form>
+            </div>
+         </div>
+
+</div>
 {% endblock content %}

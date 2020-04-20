@@ -1,9 +1,9 @@
 from multiselectfield import MultiSelectField
 from django.db import models
-from django_mysql.models import ListCharField
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+import asyncio
 import math
 
 class Profile(models.Model):
@@ -39,6 +39,11 @@ class Profile(models.Model):
         symmetrical=False
     )
 
+    def fire_and_forget(f):
+        def wrapped(*args, **kwargs):
+            return asyncio.get_event_loop().run_in_executor(None, f, *args, *kwargs)
+        return wrapped
+
     @receiver(post_save, sender=User)
     def create_user_profile(sender, instance, created, **kwargs):
         if created:
@@ -52,7 +57,7 @@ class Profile(models.Model):
         terms = Term.objects.select_related().filter(user = self)
         return "Name : "+ self.user.username + "\t(terms: "+str(list(terms))+")"#+ "\t(similarUsers: "+str(users)+")"
 
-    def recommendBooks(user1):
+    async def recommendBooks(user1):
         print("\nrecomendation start!!!")
         booksColl = Profile.recommendBooksColl(user1)
         print("\ncollaborative: " + str(booksColl))
@@ -62,19 +67,25 @@ class Profile(models.Model):
         for b1 in booksColl:
             if b1 in booksCont:
                 rec.append(b1)
-        if rec:
-            return rec
-        rec = booksCont
-        for b2 in booksColl:
-            if rec.count(b2) == 0:
-                rec.append(b2)
+        if not rec: #rec empty
+            rec.extend(booksCont)
+            rec.extend(booksColl)
+            rec = list(set(rec))  # remove duplicates
+
         user1.recommendedBooks.clear()
         for book in rec:
             user1.recommendedBooks.add(book)
         print("\nreccomended: " + str(rec))
         return rec
 
-    def updateTerms(user1, term, newValue):
+   #@fire_and_forget
+    async def updateTerms(user1, terms, sign):
+        Profile.updateTerm(user1, terms[0], 0.8*sign)  # author
+        Profile.updateTerm(user1, terms[1], 0.2*sign)  # language
+        for term in terms[2:]:  #genres
+            Profile.updateTerm(user1, term, 1*sign)
+
+    def updateTerm(user1, term, newValue):
         termOld = Term.objects.filter(user=user1)  # ovde moze da se upotrebi Q biblioteka
         termOld = termOld.filter(term=term)
         if (termOld):

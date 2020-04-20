@@ -1,56 +1,59 @@
 {% extends 'blog/base.html' %}
 
 {% block content %}
-<div class="container">
-  <h2><p>Hello {{profile.user.username}},</p></h2>
 
-    <div class="row">
+<div class="container">
+
+  <h3><p>Hello {{profile.user.username}},</p></h3>
+
     {% if recBooks %}
-        <h2><p>Check out some of the titles that we have selected for you.</p>
-        <p>Recommended books: </p></h2>
+        <h3><p>Check out some of the titles that we have selected for you.</p>
+        <p>Recommended books: </p></h3>
+    <div class="row">
         {% for book in recBooks %}
-        <div class="col-lg-2">
+        <div class="col-sm-2">
             <a href="{% url 'book_detail' pk=book.id %}">
                 <img class="rounded-circle" src='{{book.cover.url}}' alt="Generic placeholder image" width="130" height="180">
             </a>
             <h5>{{book}}</h5>
         </div><!-- /.col-lg-4 -->
         {% endfor %}
+        </div>
     {% else %}
-        <h2><p>To see our recommendations, like or dislike at least 3 books: </p></h2>
+        <h3><p>To see our recommendations, like or dislike at least 3 books: </p></h3>
     {% endif %}
-    </div>
+
         <hr>
-        <h2><p>Looking for more info about some specific book or just want to rate a book that you have already read? Use our search engine to find it.</p></h2>
+        <h3><p>Looking for more info about some specific book or just want to rate a book that you have already read? Use our search engine to find it.</p></h3>
         <form name="myform" method="GET" action=""  style="margin-bottom: 50px;">
             <input type="text" name="search" placeholder="Search" value='{{request.GET.search}}' />
             <a><input type="submit" value="Search" /></a>
         </form>
-        <div class="album py-5 bg-light">
-        <div class="container">
+
+    <div class="album py-5 bg-light">
+
           <div class="row">
+                      <div class="container">
         {% if books %}
           {% for book in books %}
-          <div class="col-md-4">
+          <div class="col-sm-12 col-md-4">
 
-                <div class="col-md-6" style="margin-bottom: 50px;">
-              <img src='{{book.cover.url}}' class='img-responsive' style="height:220px;"/>
-              </div>
+            <div class="col-sm-4 col-md-6" style="margin-bottom: 50px;">
+                <img src='{{book.cover.url}}' class='img-responsive' style="height:220px;"/>
+            </div>
 
 
-                <div class="col-md-6" >
-
-                <h3>{{book.title}}</h3>
-
-                  <h4>{{book.author}}</h4>
-                  <p class="card-text">Genre: {{book.genre}}</p>
-                  <p class="card-text">Language: {{book.language}}</p>
-                  <div class="d-flex justify-content-between align-items-center">
+            <div class="col-sm-6 col-md-6">
+            <h3>{{book.title}}</h3>
+            <h4>{{book.author}}</h4>
+            <p class="card-text">Genre: {{book.genre}}</p>
+            <p class="card-text">Language: {{book.language}}</p>
+            <div class="d-flex justify-content-between align-items-center">
                     <div class="btn-group">
-                      <a href="{% url 'book_detail' pk=book.id %}"><button type="button">See more</button></a>
+                        <a href="{% url 'book_detail' pk=book.id %}"><button type="button">See more</button></a>
                     </div>
-                  </div>
                 </div>
+            </div>
 
               </div>
 

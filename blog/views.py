@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Comment, Profile, Term, Book, User
-from .forms import CommentForm, BookForm
+from .forms import BookForm
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.shortcuts import render
 from django.contrib.auth import login, authenticate
@@ -9,6 +9,7 @@ from django.db.models import Q
 import random
 from . import commentSemantics
 import datetime
+import asyncio
 
 def book_detail(request, pk):
     if (not request.user.is_authenticated):
@@ -25,9 +26,12 @@ def book_detail(request, pk):
             newComment.save()
 
             user = request.user.profile
-            user.updateTerms(book.author, float(sentiment) * 0.8)
-            user.updateTerms(book.genre, float(sentiment) * 1.0)
-            user.updateTerms(book.language, float(sentiment) * 0.2)
+            terms_list = []
+            terms_list.append(object.author)
+            terms_list.append(object.language)
+            terms_list.extend(object.genre)
+            asyncio.run(Profile.updateTerms(request.user.profile, terms_list, sentiment))  # run async
+
             if sentiment == 1:
                 user.likedBooks.add(book)
             else:
@@ -71,22 +75,27 @@ def book_like(request, pk):
     if (not request.user.is_authenticated):
         return redirect('first')
     object = get_object_or_404(Book, id=pk)
-    Profile.updateTerms(request.user.profile,object.author, 0.8) #run async
-    Profile.updateTerms(request.user.profile,object.genre, 1.0) #run async
-    Profile.updateTerms(request.user.profile,object.language, 0.2) #runasync
+    terms_list = []
+    terms_list.append(object.author)
+    terms_list.append(object.language)
+    terms_list.extend(object.genre)
+    asyncio.run(Profile.updateTerms(request.user.profile, terms_list, 1))  # run async
+    asyncio.run(Profile.recommendBooks(request.user.profile))  # run async
+   # asyncio.ensure_future(Profile.updateTerms(request.user.profile, terms_list, 1))  # run async
     request.user.profile.likedBooks.add(object)
-    Profile.recommendBooks(request.user.profile) #run async
     return redirect('home')
 
 def book_dislike(request, pk):
     if (not request.user.is_authenticated):
         return redirect('first')
     object = get_object_or_404(Book, id=pk)
-    Profile.updateTerms(request.user.profile, object.author, -0.8)  # run async
-    Profile.updateTerms(request.user.profile, object.genre, -1.0)  # run async
-    Profile.updateTerms(request.user.profile, object.language, -0.2)  # runasync
+    terms_list = []
+    terms_list.append(object.author)
+    terms_list.append(object.language)
+    terms_list.extend(object.genre)
+    asyncio.run(Profile.updateTerms(request.user.profile, terms_list, -1))  # run async
+    asyncio.run(Profile.recommendBooks(request.user.profile))  # run async
     request.user.profile.likedBooks.add(object)
-    Profile.recommendBooks(request.user.profile)  # run async
     return redirect('home')
 
 def home(request):
@@ -120,7 +129,21 @@ def home(request):
     return render(request, 'blog/home1.html', {'profile': profile, 'recBooks': recBooks[0:6], 'books': books})
 
 def first(request):
-    return render(request, 'registration/home.html', {}) ##
+    if request.method == 'POST':
+        username = request.POST.get('name')
+        password = request.POST.get('password')
+        user = authenticate(username=username, password=password)
+        if user:
+            if user.is_active:
+                login(request, user)
+                return redirect('home')
+            #else:
+            #    return HttpResponse("Your account was inactive.")
+        else:
+            print("Username or password incorrect!")
+            return render(request, 'registration/home.html', {'error': "Username or password incorrect!"})
+    else:
+        return render(request, 'registration/home.html', {})
 
 def signup(request):
     if request.method == 'POST':
@@ -132,9 +155,12 @@ def signup(request):
             user = authenticate(username=username, password=raw_password)
             login(request, user)
             return redirect('home')
-    else:
-        form = UserCreationForm()
-    return render(request, 'registration/signup.html', {'form': form})
+        else:
+            print("failed")
+            return render(request, 'registration/signup.html', {'error': "The two password fields don't match."})
+    #else:
+        #form = UserCreationForm()
+    return render(request, 'registration/signup.html', {})
 
 def guest(request):
     seed = datetime.datetime.now().strftime("%H%M%S")
