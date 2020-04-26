@@ -1,6 +1,13 @@
 from django.urls import path, include
 from . import views
 from django.contrib.auth import views as auth_views
+from .models import Profile
+
+#remove old guest accounts
+from background_task.models import Task
+if not Task.objects.filter(verbose_name="remove_guests").exists():
+   Profile.removeGuests(None, repeat=Task.DAILY, verbose_name="remove_guests", repeat_until=None)
+#Profile.removeGuests(None, repeat=60000, repeat_until=None)
 
 urlpatterns = [
     # Login and Logout
@@ -16,4 +23,6 @@ urlpatterns = [
     path('home/<int:pk>/', views.book_detail, name='book_detail'),
     path('home/<int:pk>/book_like/', views.book_like, name='book_like'),
     path('home/<int:pk>/book_dislike/', views.book_dislike, name='book_dislike'),
+
+    path('test/', views.test, name='test'),
 ]

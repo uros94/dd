@@ -11,6 +11,9 @@ from . import commentSemantics
 import datetime
 import asyncio
 
+#remove old guest accounts
+#Profile.removeGuests(repeat=10, repeat_until=None)
+
 def book_detail(request, pk):
     if (not request.user.is_authenticated):
         return redirect('first')
@@ -30,7 +33,9 @@ def book_detail(request, pk):
             terms_list.append(book.author)
             terms_list.append(book.language)
             terms_list.extend(book.genre)
-            asyncio.run(Profile.updateTerms(request.user.profile, terms_list, sentiment))  # run async
+            print("Sending: ", request.user.pk, terms_list, sentiment)
+            Profile.updateTerms1(request.user.pk, terms_list, sentiment)  # run async
+            #asyncio.run(Profile.updateTerms(request.user.profile, terms_list, sentiment))  # run async
 
             if sentiment == 1:
                 user.likedBooks.add(book)
@@ -79,9 +84,10 @@ def book_like(request, pk):
     terms_list.append(object.author)
     terms_list.append(object.language)
     terms_list.extend(object.genre)
-    asyncio.run(Profile.updateTerms(request.user.profile, terms_list, 1))  # run async
-    asyncio.run(Profile.recommendBooks(request.user.profile))  # run async
-   # asyncio.ensure_future(Profile.updateTerms(request.user.profile, terms_list, 1))  # run async
+    print("Sending: ",request.user.pk, terms_list, 1)
+    Profile.updateTerms1(request.user.pk, terms_list, 1)  # run async
+    #asyncio.run(Profile.recommendBooks(request.user.profile))  # run async
+    #asyncio.ensure_future(Profile.updateTerms(request.user.profile, terms_list, 1))  # run async
     request.user.profile.likedBooks.add(object)
     return redirect('home')
 
@@ -93,8 +99,10 @@ def book_dislike(request, pk):
     terms_list.append(object.author)
     terms_list.append(object.language)
     terms_list.extend(object.genre)
-    asyncio.run(Profile.updateTerms(request.user.profile, terms_list, -1))  # run async
-    asyncio.run(Profile.recommendBooks(request.user.profile))  # run async
+    print("Sending: ",request.user.pk, terms_list, -1)
+    Profile.updateTerms1(request.user.pk, terms_list, -1)  # run async
+    #asyncio.run(Profile.updateTerms(request.user.profile, terms_list, -1))  # run async
+    #asyncio.run(Profile.recommendBooks(request.user.profile))  # run async
     request.user.profile.likedBooks.add(object)
     return redirect('home')
 
@@ -136,6 +144,7 @@ def first(request):
         if user:
             if user.is_active:
                 login(request, user)
+                user.profile.resetTerminal(user.username+" logged in at "+str(datetime.datetime.now()))
                 return redirect('home')
             #else:
             #    return HttpResponse("Your account was inactive.")
@@ -149,15 +158,16 @@ def signup(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
         if form.is_valid():
-            form.save()
             username = form.cleaned_data.get('username')
             raw_password = form.cleaned_data.get('password1')
+            form.save()
             user = authenticate(username=username, password=raw_password)
+            user.profile.textToTerminal(user.username + " logged in at " + str(datetime.datetime.now()))
             login(request, user)
             return redirect('home')
         else:
-            print("failed")
-            return render(request, 'registration/signup.html', {'error': "The two password fields don't match."})
+            print("failed", form.errors)
+            return render(request, 'registration/signup.html', {'error': form.errors})
     #else:
         #form = UserCreationForm()
     return render(request, 'registration/signup.html', {})
@@ -165,11 +175,21 @@ def signup(request):
 def guest(request):
     seed = datetime.datetime.now().strftime("%H%M%S")
     random.seed(seed)
-    username = "guest" + str(random.randint(0, 9999))
-    raw_password = "1234"
+
+    #make sure this is unique guest ID
+    while True:
+        username = "guest" + str(random.randint(0, 9999))
+        raw_password = "1234"
+        if not User.objects.filter(username=username):
+            break
+
     User.objects.create_user(username=username, password=raw_password)
     user = authenticate(username=username, password=raw_password)
+    user.profile.textToTerminal(user.username + " logged in at " + str(datetime.datetime.now()))
     login(request, user)
     return redirect('home')
 
+def test(request):
+    Term.filterBy(["Classic", "Romance"])
+    return render(request, 'registration/home.html', {})
 

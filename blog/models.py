@@ -3,7 +3,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-import asyncio
+from background_task import background
+from django.utils import timezone
 import math
 
 class Profile(models.Model):
@@ -30,19 +31,26 @@ class Profile(models.Model):
         default = None,
         related_name='recommendedTo'
     )
-    similarUsers = models.ManyToManyField(
+    """similarUsers = models.ManyToManyField(
         to='self',
         null=True,
         blank=True,
         default = None,
         related_name='similarTo',
         symmetrical=False
-    )
+    )"""
+    terminal = models.TextField(blank = True)
 
-    def fire_and_forget(f):
-        def wrapped(*args, **kwargs):
-            return asyncio.get_event_loop().run_in_executor(None, f, *args, *kwargs)
-        return wrapped
+    @background(schedule=0)
+    def textToTerminal(self, text):
+        if len(self.terminal)>5000:
+            self.terminal = self.terminal[:1000]
+        self.terminal=self.terminal+"\n"+text
+        self.save()
+
+    def resetTerminal(self, text):
+        self.terminal = text
+        self.save()
 
     @receiver(post_save, sender=User)
     def create_user_profile(sender, instance, created, **kwargs):
@@ -57,20 +65,43 @@ class Profile(models.Model):
         terms = Term.objects.select_related().filter(user = self)
         return "Name : "+ self.user.username + "\t(terms: "+str(list(terms))+")"#+ "\t(similarUsers: "+str(users)+")"
 
-    async def recommendBooks(user1):
+    def recommendBooks1(user1):
         print("\nrecomendation start!!!")
         booksColl = Profile.recommendBooksColl(user1)
         print("\ncollaborative: " + str(booksColl))
         booksCont = Profile.recommendBooksCont(user1)
         print("\ncontent: " + str(booksCont))
-        rec = []
-        for b1 in booksColl:
-            if b1 in booksCont:
-                rec.append(b1)
-        if not rec: #rec empty
-            rec.extend(booksCont)
-            rec.extend(booksColl)
-            rec = list(set(rec))  # remove duplicates
+
+        rec=[]
+        for b1 in booksCont:
+            for b2 in booksColl:
+                if b1[1]==b2[1]:
+                    rec.append([b1[0]+b2[0],b1[1]])
+                    booksColl.remove(b2)
+                    booksCont.remove(b1)
+                    break
+
+        rec.extend(booksCont)
+        rec.extend(booksColl)
+
+        rec.sort(key=lambda x: x[0], reverse=True)
+        print("\nreccomended: " + str(rec))
+
+        user1.recommendedBooks.clear()
+        for book in rec[0:6]:
+            user1.recommendedBooks.add(book[1])
+        return rec
+
+    def recommendBooks(user1):
+        print("\nrecomendation start!!!")
+        user1.textToTerminal("\nrecomendation start!!!")
+        booksColl = Profile.recommendBooksColl(user1)
+        print("\ncollaborative: " + str(booksColl))
+        booksCont = Profile.recommendBooksCont(user1)
+        print("\n\ncontent: " + str(booksCont))
+        rec = list(set(booksColl) & set(booksCont))
+        if not rec: #if intersection rec empty - use union
+            rec = list(set(booksColl) | set(booksCont))
 
         user1.recommendedBooks.clear()
         for book in rec:
@@ -78,7 +109,21 @@ class Profile(models.Model):
         print("\nreccomended: " + str(rec))
         return rec
 
-   #@fire_and_forget
+    @background(schedule=0)
+    def updateTerms1(pk, terms, sign):
+        print("Background started\n")
+        user1 = User.objects.get(pk=pk)
+        user1 = user1.profile
+        user1.textToTerminal("\nRun in background " + str(timezone.now()))
+        print(pk,"identified as Profile: ", user1)
+        Profile.updateTerm(user1, terms[0], 0.8 * sign)  # author
+        Profile.updateTerm(user1, terms[1], 0.2 * sign)  # language
+        for term in terms[2:]:  # genres
+            Profile.updateTerm(user1, term, 1 * sign)
+        print("Updated terms ", user1)
+        user1.textToTerminal("\nUpdated terms "+str(user1))
+        Profile.recommendBooks1(user1)
+
     async def updateTerms(user1, terms, sign):
         Profile.updateTerm(user1, terms[0], 0.8*sign)  # author
         Profile.updateTerm(user1, terms[1], 0.2*sign)  # language
@@ -86,8 +131,8 @@ class Profile(models.Model):
             Profile.updateTerm(user1, term, 1*sign)
 
     def updateTerm(user1, term, newValue):
-        termOld = Term.objects.filter(user=user1)  # ovde moze da se upotrebi Q biblioteka
-        termOld = termOld.filter(term=term)
+        termsOld = Term.objects.filter(user=user1)  # ovde moze da se upotrebi Q biblioteka
+        termOld = termsOld.filter(term=term)
         if (termOld):
             termOld[0].value = termOld[0].value + newValue
             termOld[0].save()
@@ -97,38 +142,75 @@ class Profile(models.Model):
         return
 
     def recommendBooksCont(user1):
-        topTerms = list(Term.objects.filter(user=user1))
-        topTerms.sort(key=lambda x: x.value, reverse=True)
-        topTerms = topTerms[0:4]
+        terms = list(Term.objects.filter(user=user1))
+        user1.textToTerminal("\nContent based rec:")
+        # normalize term values
+        tmax = 0
+        for t in terms:
+            if abs(t.value)>tmax:
+                tmax=abs(t.value)
+        for t in terms:
+            t.value = t.value/tmax
+        #print("max value:",tmax, "\nNormalized: ",terms) #DEBUG
+
+        #exclude less significant terms
+        #terms.sort(key=lambda x: abs(x.value), reverse=True)
+        #terms = [t for t in terms if abs(t.value) > 0.3]
+
         allBooks = list(Book.objects.all())
         allBooksuser1 = list(user1.likedBooks.all())
         allBooksuser1.extend(list(user1.dislikedBooks.all()))
         allBooksuser1 = list(set(allBooksuser1)) #remove duplicates
-        if allBooksuser1:
-            for book in allBooksuser1:
-                allBooks.remove(book)
+        #if allBooksuser1:
+        #    for book in allBooksuser1:
+        #        allBooks.remove(book)
         recBooks = []
-        for term in topTerms:
+        for term in terms:
             for book in allBooks:
                 if (term.term in book.terms()):
-                #if (book.author == term.term or book.genre == term.term or book.language == term.term):
-                    recBooks.append(book)
-                    allBooks.remove(book)
+                    if book not in allBooksuser1:
+                        recBooks.append([book.evaluate(terms), book])
+                        allBooks.remove(book)
+                        print("eval cont --- ", book, book.evaluate(terms)) # DEBUG
+
+        recBooks.sort(key=lambda x: x[0], reverse=True)
+        for r in recBooks[0:8]:
+            user1.textToTerminal("eval cont --- " + str(r[1]) + " " + str(r[0]))
+        if len(recBooks)>8:
+            user1.textToTerminal("... "+str(len(recBooks)-8)+" more books recommended")
+
         return recBooks
 
     def recommendBooksColl(user1):
-        Profile.updateSimilarUsers(user1)
+        user1.textToTerminal("\nCollaborative based rec:")
+        similarity = Profile.updateSimilarUsers(user1)
+        #terms = list(Term.objects.filter(user=user1))
+        allBooksuser1 = list(set(user1.likedBooks.all()) | set(user1.dislikedBooks.all()))
+        #print("This user ",user1.user.username, allBooksuser1) # DEBUG
         recBooks = []
-        for user in list(user1.similarUsers.all()):
-            recBooks.extend(list(user.likedBooks.all()))
-        recBooks = list(set(recBooks))  # remove duplicates
-        """allBooksuser1 = list(user1.likedBooks.all())
-        allBooksuser1.extend(list(user1.dislikedBooks.all()))
-        allBooksuser1 = list(set(allBooksuser1))  # remove duplicates
-        if allBooksuser1:
-            for book in allBooksuser1:
-                if book in recBooks:
-                    recBooks.remove(book)"""
+        recBooksTmp = []
+        for s in similarity:
+            user = s[1]
+            coef = s[0]
+            # avoid making duplicates
+            dif = list(set(user.likedBooks.all()) - set(recBooksTmp))
+            # exclude books user already liked/disliked
+            dif = list(set(dif) - set(allBooksuser1))
+
+            #print(user.user.username, user.likedBooks.all())  # DEBUG
+            #print("dif: ",dif) # DEBUG
+
+            for r in dif:
+                print("eval col --- ", r,coef)
+                recBooks.append([coef,r])
+                recBooksTmp.append(r)
+
+        recBooks.sort(key=lambda x: x[0], reverse=True)
+        for r in recBooks[0:8]:
+            user1.textToTerminal("eval coll --- " + str(r[1]) + " " + str(r[0]))
+        if len(recBooks)>8:
+            user1.textToTerminal("... "+str(len(recBooks)-8)+" more books recommended")
+
         return recBooks
 
     def updateSimilarUsers(user1):
@@ -143,11 +225,15 @@ class Profile(models.Model):
                 similarity[i].append(u)
                 i = i + 1
         similarity.sort(key=lambda x: x[0], reverse=True)
-        user1.similarUsers.clear()
-        print("similarity list", similarity)
-        for newSimilarUser in similarity[0:4]:
-            user1.similarUsers.add(newSimilarUser[1])
-        return
+        similarity = [s for s in similarity if s[0]>0.5]
+        # for s in similarity:
+        #    print("similarity",s[0], s[1].user.username) # DEBUG
+
+        #user1.similarUsers.clear()
+        # debug
+        #for newSimilarUser in similarity:
+        #    user1.similarUsers.add(newSimilarUser[1])
+        return similarity
 
     def commonTerms(user1, otherProfile):
         terms1stUser = Term.objects.filter(user=user1)
@@ -180,6 +266,20 @@ class Profile(models.Model):
         coef = complexSum / math.sqrt(sqrSum1 * sqrSum2)
         return coef
 
+    @background(schedule=0)
+    def removeGuests(self):
+        print("started - removing guests background")
+        for user in User.objects.all():
+            numOfBooks = len(user.profile.likedBooks.all())+len(user.profile.dislikedBooks.all())
+            if user.username.find('guest')!=-1:
+                if timezone.now() - user.last_login > timezone.timedelta(days=5) and numOfBooks>5:
+                    print("deleted - ", user.username, " - last login -", user.last_login)
+                    user.delete()
+            elif timezone.now() - user.last_login > timezone.timedelta(days=30) and numOfBooks>3:
+                    print("deleted - ", user.username, " - last login -", user.last_login)
+            #if timezone.now() - user.last_login > timezone.timedelta(days=5):
+        print("done - removing guests background")
+
 class Book(models.Model):
     title = models.CharField(max_length=100)
     author = models.CharField(max_length=60)
@@ -210,6 +310,16 @@ class Book(models.Model):
         terms.extend(self.genre)
         return terms
 
+    #use list of terms to evaluate book value by summing users terms
+    def evaluate(self, terms):
+        e = 0
+        for t in terms:
+            if t.term in self.terms():
+                e+=t.value
+        # debug
+        #print(self.terms(), "\n", terms,"\n",e)
+        return e
+
 class Term(models.Model):
     term = models.CharField(max_length=60)
     value = models.FloatField()
@@ -220,6 +330,14 @@ class Term(models.Model):
 
     def __str__(self):
         return self.term+": "+str(self.value)
+
+    def filterBy(termsList):
+        filtered=[]
+        for term in termsList:
+            for t in Term.objects.filter(term=term):
+                filtered.append(t.user)
+        print(filtered)
+
 
 class Comment(models.Model):
     comment = models.TextField()
