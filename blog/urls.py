@@ -18,7 +18,7 @@ urlpatterns = [
     path('', views.first, name='first'),
 
     # Books
-    path('new_user/', views.new_user, name='new_user'),
+    path('terminal/', views.terminal, name='terminal'),
     path('home/', views.home, name='home'),
     path('home/<int:pk>/', views.book_detail, name='book_detail'),
     path('home/<int:pk>/book_like/', views.book_like, name='book_like'),

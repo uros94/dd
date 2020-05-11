@@ -64,7 +64,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-
             ],
         },
     },
@@ -112,8 +111,7 @@ LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'first'
 AUTH_PASSWORD_VALIDATORS = []
 
-SOCIAL_AUTH_FACEBOOK_KEY = '2953463491378134'  # App ID
-SOCIAL_AUTH_FACEBOOK_SECRET = '08d67b4afa57c800a2d7165a980b6cad'  # App Secret
+
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
 

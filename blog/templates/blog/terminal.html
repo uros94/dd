@@ -1,0 +1,176 @@
+{% load static %}
+
+<html>
+    <head>
+        <title>Django Books</title>
+        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+        <link href="https://fonts.googleapis.com/css2?family=Dosis:wght@300&family=Oswald:wght@300;400;500&family=Lobster&subset=latin,latin-ext" rel="stylesheet">
+        <link rel="stylesheet" href="{% static 'css/blog.css' %}">
+    </head>
+    <body>
+        <div class="page-header">
+            <h1><a href="/home/">Django Books</a></h1>
+        </div>
+
+{% block content %}
+<div class="container">
+
+    {% if user.is_authenticated %}
+
+    <h2 style="margin:15px;">Log of activities</h2>
+    <h3 style="margin:15px;">(Refresh the page to see the latest log updates)</h3>
+    <textarea readonly id="terminal" name="terminal" rows="10" >{{ user.profile.terminal }}</textarea>
+
+    <h2>Code</h2>
+    <div style="margin:15px;">
+        <h3>Update terms</h3>
+        <p>After a user has liked or disliked the book, the terms need to be updated. Different terms
+            like the book genre, author and language have different weights (we chose 1.0, 0.8 and 0.2 accordingly).
+            The 'sign' variable is either 1 or -1 depending on the fact did user like or dislike the book.
+        This is done async using django-background-tasks library. The term value is updated if it already exists
+        if user's terms list or added to it if it doesn't.</p>
+        <pre>    def updateTerms(pk, terms, sign):
+        user1 = User.objects.get(pk=pk)
+        user1 = user1.profile
+        updateSingleTerm(user1, terms[0], 0.8 * sign)  # author
+        updateSingleTerm(user1, terms[1], 0.2 * sign)  # language
+        for term in terms[2:]:  # genres
+            updateSingleTerm(user1, term, 1 * sign)
+
+    def updateSingleTerm(user1, term, newValue):
+        termsOld = Term.objects.filter(user=user1)  # get list of terms
+        termOld = termsOld.filter(term=term)
+        if (termOld):
+            termOld[0].value = termOld[0].value + newValue
+            termOld[0].save()
+        else:
+            termNew = Term(term=term, value=newValue, user=user1)
+            termNew.save()
+        return</pre>
+    </div>
+
+    <div style="margin:15px;">
+        <h3>Recommend books</h3>
+        <p>The recommendBooks function combines collaborative and content based recommendations into a single list and presents
+        us with 6 best ranked recommendations.</p>
+        <pre>    def recommendBooks(user1):
+        booksColl = recommendBooksColl(user1)
+        booksCont = recommendBooksCont(user1)
+        rec=[]
+        for book1 in booksCont:
+            for book2 in booksColl:
+                if book1[1]==book2[1]: # same book
+                    rec.append([book1[0]+book2[0],book1[1]]) # sum the rec values
+                    booksColl.remove(book2)
+                    booksCont.remove(book1)
+                    break
+        rec.extend(booksCont)
+        rec.extend(booksColl)
+        rec.sort(key=lambda x: x[0], reverse=True)
+        user1.recommendedBooks.clear()
+        for book in rec[0:6]:
+            user1.recommendedBooks.add(book[1])
+        return rec</pre>
+    </div>
+
+    <div style="margin:15px;">
+        <h3>Content based recommendation</h3>
+        <p>Content based recommendations are based on the list of terms user likes or dislikes. The first task is
+            normalizing all the term values by dividing each with the max term value. For every book that contains any
+        of the terms from user's list a value that represents "likability" of the book is evaluated. This value is
+        calculated as a sum of matched terms values.</p>
+        <pre>   def recommendBooksCont(user1):
+        terms = list(Term.objects.filter(user=user1))
+        tmax = 0 # find max term value
+        for t in terms:
+            if abs(t.value)>tmax:
+                tmax=abs(t.value)
+        if tmax: # normalize term values
+            for t in terms:
+                t.value = t.value/tmax
+        allBooks = list(Book.objects.all()) # all books
+        allBooksuser1 = list(set(user1.likedBooks.all()) | set(user1.dislikedBooks.all())) # user liked/disliked
+        recBooks = []
+        for term in terms:
+            for book in allBooks:
+                if (term.term in book.terms()):
+                    if book not in allBooksuser1:
+                        recBooks.append([book.evaluate(terms), book])
+                        allBooks.remove(book)
+        recBooks.sort(key=lambda x: x[0], reverse=True)
+        return recBooks
+
+    def evaluate(self, terms):
+        e = 0
+        for t in terms: # user's terms
+            if t.term in self.terms(): # this book's terms
+                e+=t.value
+        return e</pre>
+    </div>
+
+    <div style="margin:15px;">
+        <h3>Collaborative recommendation</h3>
+        <p>Collaborative recommendations are based on the list of similar users. The similarity is calculated
+        as Pearson correlation between two lists of users terms. First, the common terms and their values need to be determined
+        - commonTerms function. Then the list of similar users is created. In the end, those similarities are used as
+        indicators of how likely is it that a user might like some of the books that this 'similar user' liked.</p>
+        <pre>    def recommendBooksColl(user1):
+        similarity = updateSimilarUsers(user1)
+        allBooksuser1 = list(set(user1.likedBooks.all()) | set(user1.dislikedBooks.all()))
+        recBooks = []
+        for s in similarity:
+            user = s[1]
+            coef = s[0] * 2 # similarity with user
+            dif = list(set(user.likedBooks.all()) - set(recBooks)) # avoid making duplicates
+            dif = list(set(dif) - set(allBooksuser1)) # exclude books user already liked/disliked
+            for r in dif:
+                recBooks.append([coef,r])
+        recBooks.sort(key=lambda x: x[0], reverse=True)
+        return recBooks
+
+    def updateSimilarUsers(user1):
+        allUsers = Profile.objects.all()
+        similarity = [[] * 2 for i in range(len(allUsers) - 1)]
+        i = 0
+        for u in allUsers:
+            if (u != user1):
+                commonTermsValues = commonTerms(user1, u)
+                pc = pearsonCoef(commonTermsValues[0], commonTermsValues[1])
+                similarity[i].append([pc, u])
+                i = i + 1
+        similarity.sort(key=lambda x: x[0], reverse=True)
+        similarity = [s for s in similarity if s[0]>0.5] # cut-out low similarity users
+        return similarity
+
+    def commonTerms(user1, otherProfile):
+        terms1stUser = Term.objects.filter(user=user1)
+        terms2ndUser = Term.objects.filter(user=otherProfile)
+        commonTermsValues = [[] * (len(terms1stUser)) for i in range(2)]
+        for t1 in terms1stUser:
+            for t2 in terms2ndUser:
+                if (t1.term == t2.term):
+                    commonTermsValues[0].append(t1.value)
+                    commonTermsValues[1].append(t2.value)
+        return commonTermsValues</pre>
+    </div>
+
+    <div style="margin:15px;">
+        <h3>Comment sentiment analysis</h3>
+        <p>User comments are analysed and labeled as positive, negative or neutral based on the comment sentiment. This functionality
+            is developed using sklearn library and a dataset containing labeled yelp, imdb and amazon comments. Analyser
+        is fairly simple and it should be optimised - this is a work in progress.</p>
+    </div>
+
+    <div style="margin:15px;">
+        <h3>Other functions</h3>
+        <p>A wide variety of different functions was written to enable this site's functioning. The most important ones
+        are probably the ones running in the background as scheduled or async tasks relying on the django-background-tasks
+        python library.</p>
+    </div>
+
+    {% endif %}
+</div>
+{% endblock %}
+    </body>
+</html>

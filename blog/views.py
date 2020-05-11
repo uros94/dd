@@ -9,7 +9,7 @@ from django.db.models import Q
 import random
 from . import commentSemantics
 import datetime
-import asyncio
+import os
 
 #remove old guest accounts
 #Profile.removeGuests(repeat=10, repeat_until=None)
@@ -27,21 +27,29 @@ def book_detail(request, pk):
             now = datetime.datetime.now().strftime("%Y-%m-%d at %H:%M")
             newComment = Comment(comment=comment, book=book, user=request.user.username, semantics=sentiment, date=str(now))
             newComment.save()
+            profile = request.user.profile
+            profile.textToTerminal("\n"+str(datetime.datetime.now().strftime("%Y-%m-%d at %H:%M:%S")) + " " + profile.user.username + " left a comment: \"" + comment+ "\", sentiment: "+str(sentiment))
 
-            user = request.user.profile
-            terms_list = []
-            terms_list.append(book.author)
-            terms_list.append(book.language)
-            terms_list.extend(book.genre)
-            print("Sending: ", request.user.pk, terms_list, sentiment)
-            Profile.updateTerms1(request.user.pk, terms_list, sentiment)  # run async
-            #asyncio.run(Profile.updateTerms(request.user.profile, terms_list, sentiment))  # run async
+            if sentiment != 0:
 
-            if sentiment == 1:
-                user.likedBooks.add(book)
-            else:
-                user.dislikedBooks.add(book)
-            user.recommendBooks()
+                """terms_list = []
+                terms_list.append(book.author)
+                terms_list.append(book.language)
+                terms_list.extend(book.genre)
+                print("Sending: ", request.user.pk, terms_list, sentiment)
+                Profile.updateTerms1(request.user.pk, terms_list, sentiment)  # run async
+                #asyncio.run(Profile.updateTerms(request.user.profile, terms_list, sentiment))  # run async
+        
+                if sentiment == 1:
+                    user.likedBooks.add(book)
+                elif sentiment == -1:
+                    user.dislikedBooks.add(book)"""
+
+                if sentiment == 1:
+                    return redirect('book_like', pk)
+                elif sentiment == -1:
+                    return redirect('book_dislike', pk)
+
             return redirect('book_detail', pk)
     else:
         form = BookForm(instance=book)
@@ -52,29 +60,8 @@ def book_detail(request, pk):
         read = book in allBooksuser1
     return render(request, 'blog/book_detail.html', {'form': form, 'book': book, 'read': read, 'comments': comments})
 
-def new_user(request):
-    if(not request.user.is_authenticated):
-        return redirect('first')
-    profile = Profile.objects.get(user=request.user)
-    books=Book.objects.all()
-
-    if 'like' in request.POST:
-        print("LIKE")
-        return redirect('new_user')
-    elif 'dislike' in request.POST:
-        print("DISLIKE")
-        return redirect('new_user')
-    allBooksuser1 = list(profile.likedBooks.all())
-    allBooksuser1.extend(list(profile.dislikedBooks.all()))
-    if allBooksuser1:
-        for book in allBooksuser1:
-            if book in books:
-                books.remove(book)
-
-    query = request.GET.get("search")
-    if query:
-        books=books.filter(Q(title__icontains=query) | Q(author__icontains=query)).distinct()
-    return render(request, 'blog/new_user.html', {'profile': profile, 'books': books})
+def terminal(request):
+    return render(request, 'blog/terminal.html', {})
 
 def book_like(request, pk):
     if (not request.user.is_authenticated):
@@ -85,6 +72,7 @@ def book_like(request, pk):
     terms_list.append(object.language)
     terms_list.extend(object.genre)
     print("Sending: ",request.user.pk, terms_list, 1)
+    request.user.profile.textToTerminal("\n"+str(datetime.datetime.now().strftime("%Y-%m-%d at %H:%M:%S")) + " " + request.user.username + " liked: "+str(object))
     Profile.updateTerms1(request.user.pk, terms_list, 1)  # run async
     #asyncio.run(Profile.recommendBooks(request.user.profile))  # run async
     #asyncio.ensure_future(Profile.updateTerms(request.user.profile, terms_list, 1))  # run async
@@ -100,6 +88,7 @@ def book_dislike(request, pk):
     terms_list.append(object.language)
     terms_list.extend(object.genre)
     print("Sending: ",request.user.pk, terms_list, -1)
+    request.user.profile.textToTerminal("\n"+str(datetime.datetime.now().strftime("%Y-%m-%d at %H:%M:%S")) + " " + request.user.username + " disliked: "+str(object))
     Profile.updateTerms1(request.user.pk, terms_list, -1)  # run async
     #asyncio.run(Profile.updateTerms(request.user.profile, terms_list, -1))  # run async
     #asyncio.run(Profile.recommendBooks(request.user.profile))  # run async
@@ -114,14 +103,16 @@ def home(request):
     allBooksuser1 = list(profile.likedBooks.all())
     allBooksuser1.extend(list(profile.dislikedBooks.all()))
     if len(allBooksuser1)>2: #do not show any recs if the user haven't liked more than 2 books
-        for book in allBooksuser1:
-            if book in recBooks:
+        for book in recBooks:
+            if book in allBooksuser1:
                 recBooks.remove(book)
     else:
         recBooks=[] #do not show any recs if the user haven't liked more than 2 books
     books=Book.objects.all()
     query = request.GET.get("search")
     if query:
+        request.user.profile.textToTerminal("\n" + str(datetime.datetime.now().strftime(
+            "%Y-%m-%d at %H:%M:%S")) + " " + request.user.username + " searched for: " + str(query))
         books=books.filter(Q(title__icontains=query) | Q(author__icontains=query)).distinct()
 
     ## paginator
@@ -134,7 +125,7 @@ def home(request):
     except EmptyPage:
         books = paginator.page(paginator.num_pages)
 
-    return render(request, 'blog/home1.html', {'profile': profile, 'recBooks': recBooks[0:6], 'books': books})
+    return render(request, 'blog/home1.html', {'profile': profile, 'recBooks': recBooks[0:6], 'books': books, 'read': allBooksuser1})
 
 def first(request):
     if request.method == 'POST':
@@ -144,12 +135,13 @@ def first(request):
         if user:
             if user.is_active:
                 login(request, user)
-                user.profile.resetTerminal(user.username+" logged in at "+str(datetime.datetime.now()))
+                user.profile.resetTerminal(str(datetime.datetime.now().strftime("%Y-%m-%d at %H:%M:%S"))+ " " + user.username + " logged in")
                 return redirect('home')
             #else:
             #    return HttpResponse("Your account was inactive.")
         else:
             print("Username or password incorrect!")
+
             return render(request, 'registration/home.html', {'error': "Username or password incorrect!"})
     else:
         return render(request, 'registration/home.html', {})
@@ -162,7 +154,7 @@ def signup(request):
             raw_password = form.cleaned_data.get('password1')
             form.save()
             user = authenticate(username=username, password=raw_password)
-            user.profile.textToTerminal(user.username + " logged in at " + str(datetime.datetime.now()))
+            user.profile.resetTerminal(str(datetime.datetime.now().strftime("%Y-%m-%d at %H:%M:%S"))+ " " + user.username + " logged in")
             login(request, user)
             return redirect('home')
         else:
@@ -185,11 +177,41 @@ def guest(request):
 
     User.objects.create_user(username=username, password=raw_password)
     user = authenticate(username=username, password=raw_password)
-    user.profile.textToTerminal(user.username + " logged in at " + str(datetime.datetime.now()))
+    user.profile.resetTerminal(str(datetime.datetime.now().strftime("%Y-%m-%d at %H:%M:%S"))+ " "+ user.username + " logged in")
     login(request, user)
     return redirect('home')
 
 def test(request):
-    Term.filterBy(["Classic", "Romance"])
-    return render(request, 'registration/home.html', {})
+
+    directory = r'C:\Users\Win 10\djangogirls\dataset'
+    imgs = r'C:\Users\Win 10\djangogirls\blog\imgs'
+    for filename in os.listdir(directory):
+        try:
+            f = open(directory+'\\'+filename, "r", encoding='utf-8')
+            x = f.read()
+        except:
+            print("error --- reading ", filename)
+            continue
+
+        try:
+            x=x.split("\n")
+        except:
+            print(f.read())
+            print("error --- splitting", filename)
+            continue
+
+        try:
+            title = filename.split(".")[0]
+            author=x[0]
+            language=x[1]
+            genre=x[2].split(" ")
+            description='\n'.join(x[3:])
+            img=imgs+'\\'+title+'.jpg'
+            newBook = Book(title=title, author=author, genre=genre, cover=img, description=description, language=language)
+            newBook.save()
+        except:
+            print("error --- ",filename)
+            continue
+
+    return redirect('home')
 

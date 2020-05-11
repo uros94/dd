@@ -5,6 +5,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from background_task import background
 from django.utils import timezone
+import datetime
 import math
 
 class Profile(models.Model):
@@ -41,13 +42,12 @@ class Profile(models.Model):
     )"""
     terminal = models.TextField(blank = True)
 
-    @background(schedule=0)
+    #@background(schedule=0)
     def textToTerminal(self, text):
-        if len(self.terminal)>5000:
-            self.terminal = self.terminal[:1000]
         self.terminal=self.terminal+"\n"+text
         self.save()
 
+    #@background(schedule=0)
     def resetTerminal(self, text):
         self.terminal = text
         self.save()
@@ -67,10 +67,14 @@ class Profile(models.Model):
 
     def recommendBooks1(user1):
         print("\nrecomendation start!!!")
+
         booksColl = Profile.recommendBooksColl(user1)
         print("\ncollaborative: " + str(booksColl))
+        #user1.textToTerminal("\ncollaborative based list: " + str(booksColl))
+
         booksCont = Profile.recommendBooksCont(user1)
         print("\ncontent: " + str(booksCont))
+        #user1.textToTerminal("\ncontent based list: " + str(booksCont))
 
         rec=[]
         for b1 in booksCont:
@@ -90,15 +94,19 @@ class Profile(models.Model):
         user1.recommendedBooks.clear()
         for book in rec[0:6]:
             user1.recommendedBooks.add(book[1])
+        user1.textToTerminal("\nfinal list: " + str(rec[0:6]))
         return rec
 
-    def recommendBooks(user1):
+    """def recommendBooks(user1):
         print("\nrecomendation start!!!")
+        #timestamp = datetime.datetime.now().strftime("%Y-%m-%d at %H:%M")
         user1.textToTerminal("\nrecomendation start!!!")
         booksColl = Profile.recommendBooksColl(user1)
         print("\ncollaborative: " + str(booksColl))
+        user1.textToTerminal("\ncollaborative: " + str(booksColl))
         booksCont = Profile.recommendBooksCont(user1)
         print("\n\ncontent: " + str(booksCont))
+        user1.textToTerminal("\ncontent: " + str(booksCont))
         rec = list(set(booksColl) & set(booksCont))
         if not rec: #if intersection rec empty - use union
             rec = list(set(booksColl) | set(booksCont))
@@ -107,21 +115,21 @@ class Profile(models.Model):
         for book in rec:
             user1.recommendedBooks.add(book)
         print("\nreccomended: " + str(rec))
-        return rec
+        return rec"""
 
     @background(schedule=0)
     def updateTerms1(pk, terms, sign):
         print("Background started\n")
         user1 = User.objects.get(pk=pk)
         user1 = user1.profile
-        user1.textToTerminal("\nRun in background " + str(timezone.now()))
         print(pk,"identified as Profile: ", user1)
         Profile.updateTerm(user1, terms[0], 0.8 * sign)  # author
         Profile.updateTerm(user1, terms[1], 0.2 * sign)  # language
         for term in terms[2:]:  # genres
             Profile.updateTerm(user1, term, 1 * sign)
         print("Updated terms ", user1)
-        user1.textToTerminal("\nUpdated terms "+str(user1))
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d at %H:%M:%S")
+        user1.textToTerminal("\n" + timestamp + " New terms " + str(terms) + "\nAll terms after update "+str(user1))
         Profile.recommendBooks1(user1)
 
     async def updateTerms(user1, terms, sign):
@@ -143,15 +151,18 @@ class Profile(models.Model):
 
     def recommendBooksCont(user1):
         terms = list(Term.objects.filter(user=user1))
-        user1.textToTerminal("\nContent based rec:")
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d at %H:%M:%S")
+        user1.textToTerminal("\n"+timestamp + " Content based rec:")
         # normalize term values
         tmax = 0
         for t in terms:
             if abs(t.value)>tmax:
                 tmax=abs(t.value)
-        for t in terms:
-            t.value = t.value/tmax
+        if tmax:
+            for t in terms:
+                t.value = t.value/tmax
         #print("max value:",tmax, "\nNormalized: ",terms) #DEBUG
+        user1.textToTerminal("Normalized terms: " + str(terms)+"\n")
 
         #exclude less significant terms
         #terms.sort(key=lambda x: abs(x.value), reverse=True)
@@ -182,16 +193,22 @@ class Profile(models.Model):
         return recBooks
 
     def recommendBooksColl(user1):
-        user1.textToTerminal("\nCollaborative based rec:")
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d at %H:%M:%S")
+        user1.textToTerminal("\n" + timestamp + " Collaborative based rec:")
         similarity = Profile.updateSimilarUsers(user1)
-        #terms = list(Term.objects.filter(user=user1))
+
+        for s in similarity[0:4]:
+            user1.textToTerminal("similarity to "+s[1].user.username+": "+str(s[0]))
+        if len(similarity)>4:
+            user1.textToTerminal("... "+str(len(similarity)-4)+" more similar users\n")
+
         allBooksuser1 = list(set(user1.likedBooks.all()) | set(user1.dislikedBooks.all()))
         #print("This user ",user1.user.username, allBooksuser1) # DEBUG
         recBooks = []
         recBooksTmp = []
         for s in similarity:
             user = s[1]
-            coef = s[0]
+            coef = s[0] * 3.5 # 3.5 is a configured value
             # avoid making duplicates
             dif = list(set(user.likedBooks.all()) - set(recBooksTmp))
             # exclude books user already liked/disliked
@@ -270,16 +287,20 @@ class Profile(models.Model):
     def removeGuests(self):
         print("started - removing guests background")
         for user in User.objects.all():
-            numOfBooks = len(user.profile.likedBooks.all())+len(user.profile.dislikedBooks.all())
-            if user.username.find('guest')!=-1:
-                if timezone.now() - user.last_login > timezone.timedelta(days=5) and numOfBooks>5:
-                    print("deleted - ", user.username, " - last login -", user.last_login)
-                    user.delete()
-            elif timezone.now() - user.last_login > timezone.timedelta(days=30) and numOfBooks>3:
-                    print("deleted - ", user.username, " - last login -", user.last_login)
-            #if timezone.now() - user.last_login > timezone.timedelta(days=5):
+            try:
+                numOfBooks = len(user.profile.likedBooks.all())+len(user.profile.dislikedBooks.all())
+                if user.username.find('guest')!=-1:
+                    if timezone.now() - user.last_login > timezone.timedelta(days=5) and numOfBooks>5:
+                        print("deleted - ", user.username, " - last login -", user.last_login)
+                        user.delete()
+                elif timezone.now() - user.last_login > timezone.timedelta(days=30) and numOfBooks>3:
+                        print("deleted - ", user.username, " - last login -", user.last_login)
+                #if timezone.now() - user.last_login > timezone.timedelta(days=5):
+            except:
+                print("error --- ",user)
         print("done - removing guests background")
 
+# Classic Fiction Romance History Drama Politics Thriler Poetry Philosophy Science-Fiction Psychology Nonfiction Religion Cultural Mystery Crime
 class Book(models.Model):
     title = models.CharField(max_length=100)
     author = models.CharField(max_length=60)
@@ -292,10 +313,13 @@ class Book(models.Model):
         ('Politics','Politics'),
         ('Thriler','Thriler'),
         ('Poetry','Poetry'),
+        ('Philosophy','Philosophy'),
+        ('Psychology','Psychology'),
+        ('Science-Fiction','Science-Fiction')
     )
     genre = MultiSelectField(choices=genre_list,
-                                 max_choices=4,
-                                 max_length= 4 * 15)
+                                 max_choices=5,
+                                 max_length= 5 * 20)
     cover = models.ImageField()
     description = models.TextField()
     language = models.CharField(max_length=30)

@@ -36,21 +36,25 @@
                       <div class="container">
         {% if books %}
           {% for book in books %}
-          <div class="col-sm-12 col-md-4">
+          <div class="col-sm-6 col-md-4" style="margin-left: 0px;">
 
-            <div class="col-sm-4 col-md-6" style="margin-bottom: 50px;">
-                <img src='{{book.cover.url}}' class='img-responsive' style="height:220px;"/>
+            <div class="col-sm-5 col-md-6" style="margin-bottom: 50px;">
+                <a href="{% url 'book_detail' pk=book.id %}"><img src='{{book.cover.url}}' class='img-responsive' style="height:220px;"/></a>
             </div>
 
 
-            <div class="col-sm-6 col-md-6">
-            <h3>{{book.title}}</h3>
+            <div class="col-sm-7 col-md-6">
+            <h3 style="margin-top: 0px;">{{book.title}}</h3>
             <h4>{{book.author}}</h4>
             <p class="card-text">Genre: {{book.genre}}</p>
             <p class="card-text">Language: {{book.language}}</p>
             <div class="d-flex justify-content-between align-items-center">
                     <div class="btn-group">
                         <a href="{% url 'book_detail' pk=book.id %}"><button type="button">See more</button></a>
+                        {% if book not in read %}
+                        <a href="{% url 'book_like' pk=book.id %}"><button type="button">.<span class="glyphicon glyphicon-thumbs-up"/></button></a>
+                        <a href="{% url 'book_dislike' pk=book.id %}"><button type="button">.<span class="glyphicon glyphicon-thumbs-down"/></button></a>
+                        {% endif %}
                     </div>
                 </div>
             </div>

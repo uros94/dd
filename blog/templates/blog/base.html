@@ -9,14 +9,15 @@
     </head>
     <body>
         <div class="page-header">
+            <h1><a href="/home/">Django Books</a></h1>
+            <div id="terminal-div">Take a look of what's going on "under the hood" and see the code behind the recommendations<a href="{% url 'terminal' %}" target="_blank"><button id="terminal-button" class="button"><span>Terminal </span></button></a></div>
 
-        <h1><a href="/home/">Django Books</a></h1>
         </div>
 
             <div class="row">
                     {% block content %}
+
                     {% endblock %}
             </div>
-
     </body>
 </html>
