@@ -182,9 +182,9 @@ def guest(request):
     return redirect('home')
 
 def test(request):
-
-    directory = r'C:\Users\Win 10\djangogirls\dataset'
-    imgs = r'C:\Users\Win 10\djangogirls\blog\imgs'
+    root = os.getcwd()
+    directory = root+'\dataset'
+    imgs = root+'\imgs'
     for filename in os.listdir(directory):
         try:
             f = open(directory+'\\'+filename, "r", encoding='utf-8')
@@ -209,6 +209,7 @@ def test(request):
             img=imgs+'\\'+title+'.jpg'
             newBook = Book(title=title, author=author, genre=genre, cover=img, description=description, language=language)
             newBook.save()
+            print("added --- ", filename)
         except:
             print("error --- ",filename)
             continue
