@@ -183,8 +183,8 @@ def guest(request):
 
 def test(request):
     root = os.getcwd()
-    directory = root+'\dataset'
-    imgs = root+'\imgs'
+    directory = root+'\\dataset'
+    imgs = root+'\\blog\\imgs'
     for filename in os.listdir(directory):
         try:
             f = open(directory+'\\'+filename, "r", encoding='utf-8')
