@@ -300,7 +300,8 @@ class Profile(models.Model):
                 print("error --- ",user)
         print("done - removing guests background")
 
-# Classic Fiction Romance History Drama Politics Thriler Poetry Philosophy Science-Fiction Psychology Nonfiction Religion Cultural Mystery Crime
+# Classic Fiction Romance History Drama Politics Thriler Poetry Philosophy Science-Fiction Psychology
+# Nonfiction Religion Cultural Mystery Crime
 class Book(models.Model):
     title = models.CharField(max_length=100)
     author = models.CharField(max_length=60)
@@ -315,7 +316,28 @@ class Book(models.Model):
         ('Poetry','Poetry'),
         ('Philosophy','Philosophy'),
         ('Psychology','Psychology'),
-        ('Science-Fiction','Science-Fiction')
+        ('Science-Fiction','Science-Fiction'),
+        ('Nonfiction','Nonfiction'),
+        ('Religion','Religion'),
+        ('Cultural','Cultural'),
+        ('Mystery','Mystery'),
+        ('Crime','Crime'),
+        ('War','War'),
+        ('Adult','Adult'),
+        ('American','American'),
+        ('European','European'),
+        ('Biography','Biography'),
+        ('Art','Art'),
+        ('Politics','Politics'),
+        ('Science','Science'),
+        ('Spanish','Spanish'),
+        ('Business','Business'),
+        ('Academic','Academic'),
+        ('Magical-Realism','Magical-Realism'),
+        ('Short-Stories','Short-Stories'),
+        ('Self-Help','Self-Help'),
+        ('Fantasy','Fantasy'),
+        ('Young-Adult','Young-Adult')
     )
     genre = MultiSelectField(choices=genre_list,
                                  max_choices=5,

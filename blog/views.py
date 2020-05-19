@@ -183,11 +183,12 @@ def guest(request):
 
 def test(request):
     root = os.getcwd()
-    directory = root+'\\dataset'
-    imgs = root+'\\blog\\imgs'
+    directory = os.path.join(root,'dataset')
+    imgs = os.path.join(root,'blog')
+    imgs = os.path.join(imgs,'imgs')
     for filename in os.listdir(directory):
         try:
-            f = open(directory+'\\'+filename, "r", encoding='utf-8')
+            f = open(os.path.join(directory,filename), "r", encoding='utf-8')
             x = f.read()
         except:
             print("error --- reading ", filename)
@@ -206,7 +207,7 @@ def test(request):
             language=x[1]
             genre=x[2].split(" ")
             description='\n'.join(x[3:])
-            img=imgs+'\\'+title+'.jpg'
+            img=os.path.join(imgs,str(+title+'.jpg'))
             newBook = Book(title=title, author=author, genre=genre, cover=img, description=description, language=language)
             newBook.save()
             print("added --- ", filename)
