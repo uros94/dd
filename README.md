@@ -22,6 +22,7 @@
 
 ### comment out the background_task class !!!
 
+### run migrations
 - python manage.py makemigrations
 - python manage.py migrate
 
