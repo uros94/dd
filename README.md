@@ -32,3 +32,6 @@
 ### run the app
 - python manage.py createsuperuser
 - python manage.py runserver
+
+
+### hit http://127.0.0.1:8000/test/ to populate the test db
