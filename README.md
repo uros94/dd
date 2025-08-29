@@ -20,13 +20,13 @@
 - pip install django-multiselectfield
 - python -m pip install Pillow
 
-### comment out the background_task class !!!
+### comment out the background_task class and similarUsers field !!!
 
 ### run migrations
 - python manage.py makemigrations
 - python manage.py migrate
 
-### remove the comments from background_task class and run migrations again
+### remove the comments from background_task class and similarUsers field and run migrations again
 - python manage.py makemigrations
 - python manage.py migrate
 
