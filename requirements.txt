@@ -1,5 +1,8 @@
 Django~=2.2.4
 Pillow
 nltk
-sklearn
-numpy
+scikit-learn==0.20.3
+numpy==1.16.2
+django-background-tasks==1.2.5
+django-compat==1.0.15
+django-multiselectfield==1.0.1
