@@ -32,19 +32,6 @@ def book_detail(request, pk):
 
             if sentiment != 0:
 
-                """terms_list = []
-                terms_list.append(book.author)
-                terms_list.append(book.language)
-                terms_list.extend(book.genre)
-                print("Sending: ", request.user.pk, terms_list, sentiment)
-                Profile.updateTerms1(request.user.pk, terms_list, sentiment)  # run async
-                #asyncio.run(Profile.updateTerms(request.user.profile, terms_list, sentiment))  # run async
-        
-                if sentiment == 1:
-                    user.likedBooks.add(book)
-                elif sentiment == -1:
-                    user.dislikedBooks.add(book)"""
-
                 if sentiment == 1:
                     return redirect('book_like', pk)
                 elif sentiment == -1:
@@ -77,7 +64,7 @@ def book_like(request, pk):
     #asyncio.run(Profile.recommendBooks(request.user.profile))  # run async
     #asyncio.ensure_future(Profile.updateTerms(request.user.profile, terms_list, 1))  # run async
     request.user.profile.likedBooks.add(object)
-    return redirect('home')
+    return redirect(request.META.get('HTTP_REFERER', '/'))#redirect('home')
 
 def book_dislike(request, pk):
     if (not request.user.is_authenticated):
@@ -89,11 +76,11 @@ def book_dislike(request, pk):
     terms_list.extend(object.genre)
     print("Sending: ",request.user.pk, terms_list, -1)
     request.user.profile.textToTerminal("\n"+str(datetime.datetime.now().strftime("%Y-%m-%d at %H:%M:%S")) + " " + request.user.username + " disliked: "+str(object))
-    Profile.updateTerms1(request.user.pk, terms_list, -1)  # run async
-    #asyncio.run(Profile.updateTerms(request.user.profile, terms_list, -1))  # run async
+    Profile.updateTerms1(request.user.pk, terms_list, -1)  # run sync
+    # asyncio.run(Profile.updateTerms(request.user.profile, terms_list, -1))  # run async
     #asyncio.run(Profile.recommendBooks(request.user.profile))  # run async
     request.user.profile.likedBooks.add(object)
-    return redirect('home')
+    return redirect(request.META.get('HTTP_REFERER', '/'))#redirect('home')
 
 def home(request):
     if(not request.user.is_authenticated):
@@ -186,34 +173,37 @@ def test(request):
     directory = os.path.join(root,'dataset')
     imgs = os.path.join(root,'blog')
     imgs = os.path.join(imgs,'imgs')
-    for filename in os.listdir(directory):
-        try:
-            f = open(os.path.join(directory,filename), "r", encoding='utf-8')
-            x = f.read()
-        except:
-            print("error --- reading ", filename)
-            continue
 
-        try:
-            x=x.split("\n")
-        except:
-            print(f.read())
-            print("error --- splitting", filename)
-            continue
+    try:
+        for filename in os.listdir(directory):
+            full_path = os.path.join(directory, filename)
+            if os.path.isfile(full_path):
+                with open(full_path, 'r') as file:
+                    content = file.read()
+                    # print(f"Content of {filename}:\n{content}\n---")
+            try:
+                content = content.split("\n")
+            except Exception as e:
+                print("error --- splitting", filename, e)
+                continue
 
-        try:
-            title = filename.split(".")[0]
-            author=x[0]
-            language=x[1]
-            genre=x[2].split(" ")
-            description='\n'.join(x[3:])
-            img=os.path.join(imgs,str(+title+'.jpg'))
-            newBook = Book(title=title, author=author, genre=genre, cover=img, description=description, language=language)
-            newBook.save()
-            print("added --- ", filename)
-        except:
-            print("error --- ",filename)
-            continue
+            try:
+                title = filename.split(".")[0]
+                author=content[0]
+                language=content[1]
+                genre=content[2].split(" ")
+                description='\n'.join(content[3:])
+                # img=os.path.join(imgs,str(title+'.jpg'))
+                img = str(title+'.jpg')
+                newBook = Book(title=title, author=author, genre=genre, cover=img, description=description, language=language)
+                newBook.save()
+                print("added --- ", filename)
+            except Exception as e:
+                print("error --- importing", filename, e)
+    except FileNotFoundError:
+        print(f"Error: Directory not found at {directory}")
+    except Exception as e:
+            print(f"An error occurred: {e}")
 
     return redirect('home')
 

@@ -4,9 +4,9 @@ from django.contrib.auth import views as auth_views
 from .models import Profile
 
 #remove old guest accounts
-from background_task.models import Task
-if not Task.objects.filter(verbose_name="remove_guests").exists():
-   Profile.removeGuests(None, repeat=Task.DAILY, verbose_name="remove_guests", repeat_until=None)
+# from background_task.models import Task
+# if not Task.objects.filter(verbose_name="remove_guests").exists():
+#    Profile.removeGuests(None, repeat=Task.DAILY, verbose_name="remove_guests", repeat_until=None)
 #Profile.removeGuests(None, repeat=60000, repeat_until=None)
 
 urlpatterns = [

@@ -32,17 +32,17 @@ class Profile(models.Model):
         default = None,
         related_name='recommendedTo'
     )
-    """similarUsers = models.ManyToManyField(
+    similarUsers = models.ManyToManyField(
         to='self',
         null=True,
         blank=True,
         default = None,
         related_name='similarTo',
         symmetrical=False
-    )"""
+    )
     terminal = models.TextField(blank = True)
 
-    #@background(schedule=0)
+    # @background(schedule=0)
     def textToTerminal(self, text):
         self.terminal=self.terminal+"\n"+text
         self.save()
@@ -117,7 +117,7 @@ class Profile(models.Model):
         print("\nreccomended: " + str(rec))
         return rec"""
 
-    @background(schedule=0)
+    # @background(schedule=0)
     def updateTerms1(pk, terms, sign):
         print("Background started\n")
         user1 = User.objects.get(pk=pk)
@@ -300,8 +300,6 @@ class Profile(models.Model):
                 print("error --- ",user)
         print("done - removing guests background")
 
-# Classic Fiction Romance History Drama Politics Thriler Poetry Philosophy Science-Fiction Psychology
-# Nonfiction Religion Cultural Mystery Crime
 class Book(models.Model):
     title = models.CharField(max_length=100)
     author = models.CharField(max_length=60)
@@ -383,7 +381,6 @@ class Term(models.Model):
             for t in Term.objects.filter(term=term):
                 filtered.append(t.user)
         print(filtered)
-
 
 class Comment(models.Model):
     comment = models.TextField()
